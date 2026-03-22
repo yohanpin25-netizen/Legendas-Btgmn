@@ -127,6 +127,43 @@ body{background:var(--bg);color:var(--brg);font-family:'Space Mono',monospace;he
 #ov span{color:#111;font-size:12px;letter-spacing:4px;}
 #toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%) translateY(16px);background:#1a1a1a;border:1px solid #333;color:#aaa;padding:7px 18px;border-radius:6px;font-size:11px;letter-spacing:1px;opacity:0;transition:all .22s;pointer-events:none;z-index:9999;white-space:nowrap;}
 #toast.v{opacity:1;transform:translateX(-50%) translateY(0);}
+.linha .tl{color:#ffffff !important;}
+.linha.mus .tl{color:#ffffff !important;}
+.linha .spk{color:var(--gold) !important;}
+
+/* Botão palavra-chave */
+.btn-key{
+  background:none;
+  border:1px solid #2a2a2a;
+  border-radius:3px;
+  font-size:10px;
+  padding:1px 5px;
+  cursor:pointer;
+  color:#2a2a2a;
+  font-family:'Space Mono',monospace;
+  height:18px;
+  line-height:1;
+  transition:none;
+  opacity:0.4;
+}
+.btn-key:hover{
+  border-color:#555;
+  color:#555;
+  opacity:0.7;
+}
+/* COM chave configurada — bem visível */
+.btn-key.ativo{
+  background:#003a00;
+  border:1px solid #00e676;
+  color:#00e676;
+  opacity:1;
+  font-weight:700;
+  box-shadow:0 0 6px #00e67644;
+}
+.btn-key.ativo:hover{
+  background:#004d00;
+  box-shadow:0 0 10px #00e67666;
+}
 </style>
 </head>
 <body>
@@ -2717,11 +2754,11 @@ function salvarKey() {
   const btn = document.querySelector('[data-lid="' + _keyLid + '"][data-action="key"]');
   if (raw.length > 0) {
     keys[_keyLid] = raw;
-    if (btn) { btn.style.borderColor='#448aff'; btn.style.color='#448aff'; btn.title='CHAVE: '+raw.toUpperCase(); }
+    if (btn) { btn.classList.add('ativo'); btn.title='🔑 '+raw.toUpperCase(); btn.style.borderColor=''; btn.style.color=''; }
     toast('CHAVE: "' + raw.toUpperCase() + '" SALVA');
   } else {
     delete keys[_keyLid];
-    if (btn) { btn.style.borderColor=''; btn.style.color=''; btn.title='Palavra-chave'; }
+    if (btn) { btn.classList.remove('ativo'); btn.title='Palavra-chave'; btn.style.borderColor=''; btn.style.color=''; }
     toast('CHAVE REMOVIDA');
   }
   fecharKeyModal();
