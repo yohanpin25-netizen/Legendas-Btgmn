@@ -15,7 +15,7 @@ body{background:var(--bg);color:var(--brg);font-family:'Space Mono',monospace;he
 #tx{font-family:Arial,sans-serif;font-weight:900;font-size:clamp(16px,3.6vw,54px);color:var(--gold);text-align:center;line-height:1.15;letter-spacing:.01em;width:100%;text-transform:uppercase;word-break:break-word;}
 #tx ..spk-led{color:#fff !important;margin-right:.3em;}
 #tx.mus{color:var(--gold);}
-#tx.imp{color:#cceeff;font-style:italic;text-transform:none;font-weight:600;}
+#tx.imp{color:var(--gold);font-family:Arial,sans-serif;font-style:normal;text-transform:uppercase;font-weight:900;}
 
 .fi{}
 #lbl{position:absolute;top:6px;right:10px;font-size:10px;color:#222;letter-spacing:2px;text-transform:uppercase;}
@@ -2384,9 +2384,8 @@ body{background:var(--bg);color:var(--brg);font-family:'Space Mono',monospace;he
   </select>
   <input type="text" id="ai-txt" class="ai" placeholder="Adicionar linha no final..." autocomplete="off"/>
   <button class="ba" id="btn-add">+ ADD</button>
-</div>
-<div id="toast"></div>
-<script>'use strict';
+<script>
+'use strict';
 // ── Constantes de cor ──
 const CORES = [
   {nome:'branco',   hex:'#ffffff', cls:'cor-branco'},
@@ -2405,7 +2404,10 @@ const timers={};
 const keys={}
 let _editId=null;
 let _keyLid=null;
-let _timerLid=null;;
+let _timerLid=null;
+let ensaioAtivo=false;
+let ensaioInicio=null;
+const tempos={};;
 
 // ── Refs ──
 const tx   = document.getElementById('tx');
@@ -2467,7 +2469,7 @@ function atl() {
     if (el.dataset.sn === '1' && el.dataset.sp) {
       html = '<span class="spk-led">' + el.dataset.sp.toUpperCase() + ':</span> ' + html;
     }
-    tx.className = (isM ? 'mus' : '') + ' fi';
+    tx.className = isM ? 'mus' : '';
     // Cor personalizada
     const corCls = Array.from(el.classList).find(c => c.startsWith('cor-'));
     const corHex = corCls ? (CORES.find(c => c.cls===corCls)||{hex:''}).hex : '';
@@ -2515,9 +2517,9 @@ function togPreto() { preto=!preto; ov.classList.toggle('on',preto); }
 document.addEventListener('keydown', e => {
   const tag = document.activeElement.tagName;
   if (tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
-  if (e.key==='Escape')          { e.preventDefault(); if(fs){document.getElementById('btn-fs').onclick();return;} togPreto(); }
+  if (e.key==='Escape')          { e.preventDefault(); if(fs){const bfs=document.getElementById('btn-fs');if(bfs&&bfs.onclick)bfs.onclick();return;} togPreto(); }
   if (e.key.toLowerCase()==='t'){ e.preventDefault(); togImp(); }
-  if (e.key.toLowerCase()==='f'){ e.preventDefault(); document.getElementById('btn-fs').onclick(); }
+  if (e.key.toLowerCase()==='f'){ e.preventDefault(); const bfs=document.getElementById('btn-fs');if(bfs&&bfs.onclick)bfs.onclick(); }
   if (e.key==='ArrowDown'||e.key===' ') { e.preventDefault(); const ls=gL(); if(cur<ls.length-1) ir(cur+1); }
   if (e.key==='ArrowUp')         { e.preventDefault(); if(cur>0) ir(cur-1); }
 });
@@ -2777,9 +2779,9 @@ function iniciarMic(){
 
     // ── IMPROVISO ──
     if(imp && fala.trim().length>2){
-      tx.style.color='var(--gold)';
+      tx.style.color='';
       tx.className='imp';
-      tx.innerHTML=fala.trim();
+      tx.innerHTML=fala.trim().toUpperCase();
       lbl.textContent='✏ IMPROVISO';
     }
 
@@ -2848,11 +2850,8 @@ function salvarKey() {
   }
   fecharKeyModal();
 }
-document.getElementById('key-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter')  { e.preventDefault(); salvarKey(); }
-  if (e.key === 'Escape') { e.preventDefault(); fecharKeyModal(); }
-  e.stopPropagation();
-});
+// key-input keydown handled by document listener
+
 document.getElementById('key-input').addEventListener('input', function() {
   const v = this.value.trim();
   document.getElementById('key-preview').textContent = v ? 'VAI OUVIR: "' + v.toUpperCase() + '"' : '';
@@ -3057,14 +3056,19 @@ function salvarLocal() {
 function carregarLocal() {
   try {
     const saved = localStorage.getItem(LS_KEY);
-    const ts    = localStorage.getItem(LS_KEY + '_ts');
     if (!saved) return false;
-    if (!confirm('Há edições salvas localmente (' + ts + ').\nDeseja carregar?')) return false;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = saved;
+    const cardCount = tmp.querySelectorAll('.linha').length;
+    if (cardCount < 10) {
+      localStorage.removeItem(LS_KEY);
+      return false;
+    }
+    // Carrega silenciosamente — sem confirm
     document.getElementById('op').innerHTML = saved;
     const ls = gL();
     nt.textContent = ls.length;
     if (ls.length > 0) { cur = 0; atl(); }
-    toast('EDIÇÕES CARREGADAS!');
     return true;
   } catch(e) { return false; }
 }
@@ -3082,13 +3086,10 @@ let _asTimer = setInterval(salvarLocal, 30000);
 
 
 // ── MODO ENSAIO ──
-let ensaioAtivo = false;
-let ensaioInicio = null;   // timestamp quando o card atual foi ativado
-const tempos = {};         // lid → ms acumulado
 
 function toggleEnsaio() {
   ensaioAtivo = !ensaioAtivo;
-  const btn = document.getElementById('btn-ensaio');
+  const btn = document.getElementById('btn-ensaio'); if(!btn) return;
   if (ensaioAtivo) {
     btn.textContent = '⏹ PARAR ENSAIO';
     btn.classList.add('btn-ensaio-on');
@@ -3145,14 +3146,20 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 // ── INIT ──
 (function(){
-  // Tenta carregar edições do localStorage
-  const loaded = carregarLocal();
-  if (!loaded) {
-    const ls=gL();
-    nt.textContent=ls.length;
-    if(ls.length>0)atl();
-  }
+  // Expõe funções dos modais no escopo global explicitamente
+  window.salvarKey      = salvarKey;
+  window.fecharKeyModal = fecharKeyModal;
+  window.salvarEdit     = salvarEdit;
+  window.fecharEdit     = fecharEdit;
+  window.inserirAntes   = inserirAntes;
+  window.inserirDepois  = inserirDepois;
+  window.salvarTimer    = salvarTimer;
+  window.fecharTimerModal = fecharTimerModal;
+  // Limpa localStorage corrompido e inicia sempre do zero
+  try { localStorage.removeItem('legenda_espelho_cards'); } catch(e){}
+  const ls=gL();
+  nt.textContent=ls.length;
+  if(ls.length>0)atl();
 })();
-;
 </script>
 </body></html>
